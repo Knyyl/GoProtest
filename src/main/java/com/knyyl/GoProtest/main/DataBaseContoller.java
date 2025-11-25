@@ -2,6 +2,8 @@ package com.knyyl.GoProtest.main;
 
 import jdk.jfr.Event;
 import com.knyyl.GoProtest.main.EventLister;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 import javax.xml.crypto.Data;
 import java.io.BufferedReader;
@@ -11,10 +13,16 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
+@Component
 public class DataBaseContoller {
-    private final String url = "jdbc:postgresql://localhost:5432/ProtestsDB";
-    private final String user = "postgres";
-    private final String password = "#Ma$$mann1969";
+    @Value("${spring.datasource.url}")
+    private String url;
+
+    @Value("${spring.datasource.username}")
+    private String user;
+
+    @Value("${spring.datasource.password}")
+    private String password;
 
     public Connection getConnection() throws SQLException {
         return DriverManager.getConnection(url, user, password);
@@ -49,55 +57,7 @@ public class DataBaseContoller {
 
             }
         }
-
         return events;
-    }
-
-    public void eventsbeau() throws SQLException {
-        DataBaseContoller sql = new DataBaseContoller();
-        List<EventLister> events = sql.getEvents();
-        for (EventLister i : events) {
-            System.out.println(i.id + " | " + i.location + " | " + i.description + " | " + i.attendees);
-        }
-    }
-
-    public void countmein(int id) throws SQLException {
-        try (Connection conn = getConnection()) {
-            String sql = "UPDATE events SET attendees = attendees + 1 WHERE id = ?";
-            PreparedStatement statement = conn.prepareStatement(sql);
-            statement.setInt(1, id);
-            statement.executeUpdate();
-
-        }
-
-    }
-
-    public static void main(String[] args) throws SQLException, IOException {
-        DataBaseContoller sql = new DataBaseContoller();
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        String s = "Hi";
-        while (s != "exit") {
-            System.out.println("Possible op. addevent, listevents, signup");
-            System.out.println("Please enter desired operation. ");
-            s = br.readLine();
-            s = s.toLowerCase();
-            if (s.equals("addevent")) {
-                System.out.println("Enter location: ");
-                String loc = br.readLine();
-                System.out.println("Enter description: ");
-                String desc = br.readLine();
-                sql.addEvent(loc, desc, 1);
-            }
-            if (s.equals("listevents")) {
-                sql.eventsbeau();
-            }
-            if (s.equals("signup")) {
-                System.out.println("Please specify event by id");
-                int id = Integer.parseInt(br.readLine());
-                sql.countmein(id);
-                System.out.println("Number of attendees has been updated.");
-            }
-        }
     }
 }
 
