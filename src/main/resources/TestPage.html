@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Event Manager</title>
+<style>
+    /* Global Styles */
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f4f6f8;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        min-height: 100vh;
+    }
+
+    .container {
+        background-color: #fff;
+        border-radius: 12px;
+        padding: 30px;
+        margin-top: 50px;
+        width: 100%;
+        max-width: 600px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+        text-align: center;
+        color: #333;
+        margin-bottom: 25px;
+    }
+
+    label {
+        display: block;
+        margin-top: 15px;
+        font-weight: 600;
+        color: #555;
+    }
+
+    input[type="text"] {
+        width: 100%;
+        padding: 10px 12px;
+        margin-top: 5px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        font-size: 16px;
+        transition: border 0.3s;
+    }
+
+    input[type="text"]:focus {
+        border-color: #007bff;
+        outline: none;
+    }
+
+    .button-group {
+        margin-top: 20px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        background-color: #007bff;
+        color: #fff;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background-color 0.3s, transform 0.1s;
+    }
+
+    button:hover {
+        background-color: #0056b3;
+    }
+
+    button:active {
+        transform: scale(0.97);
+    }
+
+    #eventList {
+        margin-top: 30px;
+        list-style-type: none;
+        padding: 0;
+    }
+
+    #eventList li {
+        background-color: #f1f3f5;
+        padding: 12px 15px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        font-weight: 500;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    #eventList li span {
+        font-size: 14px;
+        color: #555;
+    }
+
+    @media (max-width: 500px) {
+        .button-group {
+            flex-direction: column;
+        }
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Event Manager</h1>
+    
+    <div class="form-section">
+        <label for="eventname">Event Name</label>
+        <input type="text" id="eventname" name="eventname" placeholder="Enter event name">
+        
+        <label for="location">Location</label>
+        <input type="text" id="location" name="location" placeholder="Enter event location">
+        
+        <div class="button-group">
+            <button type="button" id="createEventButton">Create Event</button>
+        </div>
+    </div>
+
+    <div class="form-section" style="margin-top: 30px;">
+        <label for="Signup">Signup for Event (Event ID)</label>
+        <input type="text" id="Signup" name="signup" placeholder="Enter Event ID">
+        
+        <div class="button-group">
+            <button type="button" id="signupbutton">Attend</button>
+        </div>
+        
+        <label for="remove">ID for Event to be removed</label>
+        <input type="text" id="remove" name="remove" placeholder="Enter Event ID">
+        
+        <div class="button-group">
+            <button type="button" id="removeEvent">Remove Event</button>
+        </div>
+    </div>
+
+    <ul id="eventList"></ul>
+</div>
+
+<script>
+async function fetchEvents() {
+    try {
+        const response = await fetch("http://localhost:8080/api/geteventdetails", { 
+            method: "POST",
+            headers: { "Content-Type": "application/json" }
+        });
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        const events = await response.json();
+
+        const list = document.getElementById("eventList");
+        list.innerHTML = "";
+
+        events.forEach(event => {
+            const li = document.createElement("li");
+            li.textContent = `${event.id} | ${event.location} | ${event.description || ""}`;
+            const span = document.createElement("span");
+            span.textContent = `Attendees: ${event.attendees || 0}`;
+            li.appendChild(span);
+            list.appendChild(li);
+        });
+
+    } catch (error) {
+        console.error("Error fetching events:", error);
+    }
+}
+
+// Event creation
+document.getElementById("createEventButton").addEventListener("click", async () => {
+    const eventname = document.getElementById("eventname").value;
+    const location = document.getElementById("location").value;
+    
+    if (!eventname || !location) {
+        alert("Please enter both event name and location");
+        return;
+    }
+    
+    const EventCreate = { eventname, location };
+
+    try {
+        const response = await fetch("http://localhost:8080/api/sendeventdetails", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(EventCreate)
+        });
+
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        
+        const result = await response.json();
+
+        // remKey might be a string in the response, so handle it properly
+        const remKey = result.remKey;
+        alert(`Event Created!\nremKey: ${remKey}\n\nSave this remKey to remove the event later! It will not be shown to you again.`);
+
+        // Refresh the list
+        fetchEvents();
+
+        // Clear the form
+        document.getElementById("eventname").value = "";
+        document.getElementById("location").value = "";
+
+    } catch (error) {
+        console.error("Error sending data:", error);
+        alert("Failed to create event. Please try again.");
+    }
+});
+
+// Signup for event
+document.getElementById("signupbutton").addEventListener("click", async () => {
+    const eventID = document.getElementById("Signup").value;
+    
+    if (!eventID) {
+        alert("Please enter an Event ID");
+        return;
+    }
+    
+    try {
+        const response = await fetch("http://localhost:8080/api/signup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ eventId: parseInt(eventID) })
+        });
+        
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        
+        console.log("Successfully signed up for event");
+        alert("Successfully signed up for the event!");
+        fetchEvents();
+        
+        // Clear the input
+        document.getElementById("Signup").value = "";
+        
+    } catch (error) {
+        console.error("Error sending data:", error);
+        alert("Failed to sign up for event. Please check the Event ID and try again.");
+    }
+});
+
+// Remove event
+document.getElementById("removeEvent").addEventListener("click", async () => {
+    const eventID = document.getElementById("remove").value;
+    const remKey = prompt("Enter removal key:");
+    
+    if (!eventID || !remKey) {
+        alert("Please enter both Event ID and removal key");
+        return;
+    }
+    
+    try {
+        const response = await fetch("http://localhost:8080/api/removeEvent", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                eventId: eventID, // Send as string to avoid parsing issues
+                remKey: remKey // Send as string
+            })
+        });
+        
+        if (!response.ok) {
+            if (response.status === 400) {
+                throw new Error("Invalid removal key or event not found");
+            }
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        
+        console.log("Event removed successfully");
+        alert("Event removed successfully!");
+        fetchEvents();
+        
+        // Clear the input
+        document.getElementById("remove").value = "";
+        
+    } catch (error) {
+        console.error("Error removing event:", error);
+        alert("Failed to remove event: " + error.message);
+    }
+});
+
+// Initial fetch
+fetchEvents();
+
+// Refresh events every 30 seconds
+setInterval(fetchEvents, 30000);
+</script>
+
+</body>
+</html>
