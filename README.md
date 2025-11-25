@@ -16,3 +16,4 @@ Functionality-wise, the project is mostly complete. I might make some changes or
 ## Tech Stack
 - Java / Spring Boot (Controller & REST API)
 - PostgreSQL (Database)
+- (Testing html webpage with example usage)
